@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es" ng-app="editarApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Petición</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body ng-controller="EditarCtrl" class="bg-gray-100 min-h-screen">
+    <header class="bg-teal-600 text-white py-6 text-center">
+        <img src="UTNC.png" alt="Logo UTNC" class="h-20 mx-auto mb-2 bg-white rounded-full object-contain" />
+        <h1 class="text-2xl font-bold mb-1">UTNC PETICIONES DE MANTENIMIENTO</h1>
+        <a href="systemain.html" class="underline text-white hover:text-teal-200">Ver peticiones</a>
+    </header>
+    <main class="max-w-xl mx-auto mt-8 bg-white rounded-xl shadow-lg p-8">
+        <h1 class="text-2xl font-bold mb-6 text-center">Editar Petición</h1>
+        <form ng-submit="guardar()" class="space-y-4">
+            <div>
+                <label class="block font-medium mb-1">Nombre:</label>
+                <input type="text" ng-model="peticion.nombre" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Correo electrónico:</label>
+                <input type="email" ng-model="peticion.email" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Descripción:</label>
+                <textarea ng-model="peticion.descripcion" rows="3" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400"></textarea>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Categoría:</label>
+                <select ng-model="peticion.categoria" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+                    <option value="">Seleccione una categoría</option>
+                    <option value="sistemas">Sistemas</option>
+                    <option value="mantenimiento">Mantenimiento</option>
+                </select>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Tipo de lugar:</label>
+                <select ng-model="tipoLugar" ng-change="actualizarLugares()" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+                    <option value="edificio">Edificio</option>
+                    <option value="taller">Taller</option>
+                </select>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">{{ tipoLugar === 'taller' ? 'Taller:' : 'Edificio:' }}</label>
+                <select ng-model="peticion.edificio" ng-options="lugar for lugar in lugares" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+                    <option value="">Seleccione un {{ tipoLugar === 'taller' ? 'taller' : 'edificio' }}</option>
+                </select>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Planta:</label>
+                <select ng-model="peticion.planta" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+                    <option value="">Seleccione una planta</option>
+                    <option value="baja">Planta baja</option>
+                    <option value="alta">Planta alta</option>
+                </select>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Zona:</label>
+                <select ng-model="peticion.zona" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+                    <option value="">Seleccione una zona</option>
+                    <option value="pasillo">Pasillo</option>
+                    <option value="oficina">Oficina</option>
+                    <option value="salon">Salones/Laboratorios</option>
+                </select>
+            </div>
+            <div ng-if="peticion.zona === 'salon'">
+                <label class="block font-medium mb-1">Salón/Laboratorio:</label>
+                <select ng-model="peticion.salon" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+                    <option value="">Seleccione una opción</option>
+                    <option ng-repeat="opcion in getSalones(peticion.planta)" value="{{opcion}}">{{opcion}}</option>
+                </select>
+            </div>
+            <div ng-if="peticion.rechazada">
+                <label class="block font-medium mb-1">Motivo de rechazo:</label>
+                <textarea ng-model="peticion.motivoRechazo" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400"></textarea>
+            </div>
+            <div class="flex gap-4 justify-center mt-6">
+                <button type="submit" class="bg-blue-900 hover:bg-blue-700 text-white px-6 py-2 rounded">Guardar</button>
+                <a href="systemain.html" class="bg-gray-400 hover:bg-gray-600 text-white px-6 py-2 rounded text-center">Cancelar</a>
+            </div>
+        </form>
+    </main>
+    <script>
+    angular.module('editarApp', [])
+    .controller('EditarCtrl', ['$scope', function($scope) {
+        // Obtener parámetros de la URL
+        function getQueryParam(name) {
+            const url = new URL(window.location.href);
+            return url.searchParams.get(name);
+        }
+        $scope.index = getQueryParam('index');
+        $scope.categoria = getQueryParam('categoria');
+
+        // Simulación: obtener datos de localStorage (o puedes cargar de un backend real)
+        let peticiones = JSON.parse(localStorage.getItem('peticiones')) || [];
+        let rechazadas = JSON.parse(localStorage.getItem('rechazadas')) || [];
+        let lista = ($scope.categoria === 'rechazadas') ? rechazadas : peticiones;
+        $scope.peticion = angular.copy(lista[$scope.index]) || {};
+
+        // Lógica selects dependientes
+        $scope.tipoLugar = ($scope.peticion.edificio && $scope.peticion.edificio.startsWith('Taller')) ? 'taller' : 'edificio';
+        $scope.lugaresEdificio = [
+            'Docencia 1',
+            'Docencia 2',
+            'Docencia 3'
+        ];
+        $scope.lugaresTaller = [
+            'Taller de Electrónica',
+            'Taller de Mecánica',
+            'Taller de Informática'
+        ];
+        $scope.lugares = $scope.tipoLugar === 'taller' ? $scope.lugaresTaller : $scope.lugaresEdificio;
+        $scope.actualizarLugares = function() {
+            $scope.lugares = $scope.tipoLugar === 'taller' ? $scope.lugaresTaller : $scope.lugaresEdificio;
+            $scope.peticion.edificio = '';
+        };
+        $scope.getSalones = function(planta) {
+            if (planta === 'baja' || planta === 'alta') {
+                return [
+                    'Salón A',
+                    'Salón B',
+                    'Salón C',
+                    'Salón D',
+                    'Salón E',
+                    'Laboratorio de Lengua',
+                    'Laboratorio'
+                ];
+            }
+            return [];
+        };
+        $scope.guardar = function() {
+            lista[$scope.index] = angular.copy($scope.peticion);
+            if ($scope.categoria === 'rechazadas') {
+                localStorage.setItem('rechazadas', JSON.stringify(lista));
+            } else {
+                localStorage.setItem('peticiones', JSON.stringify(lista));
+            }
+            window.location.href = 'systemain.html';
+        };
+    }]);
+    </script>
+</body>
+</html>

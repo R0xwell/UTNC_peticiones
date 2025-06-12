@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UTNC PETICIONES DE MANTENIMIENTO</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body ng-app="peticionesApp" ng-controller="FormCtrl" class="bg-gray-100 min-h-screen">
+<header class="bg-teal-600 text-white py-6 text-center">
+    <img src="UTNC.png" alt="Logo UTNC" class="h-20 mx-auto mb-2 bg-white rounded-full object-contain" />
+    <h1 class="text-2xl font-bold mb-1">UTNC PETICIONES DE MANTENIMIENTO</h1>
+    <a href="systemain.html" class="underline text-white hover:text-teal-200">Ver peticiones</a>
+</header>
+<main class="max-w-xl mx-auto mt-8 bg-white rounded-xl shadow-lg p-8">
+    <form name="peticionForm" ng-submit="enviarPeticion()" novalidate autocomplete="off" class="space-y-4">
+        <div>
+            <label for="nombre" class="block font-medium mb-1">Nombre:</label>
+            <input type="text" id="nombre" ng-model="nuevaPeticion.nombre" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+        </div>
+        <div>
+            <label for="email" class="block font-medium mb-1">Correo electrónico:</label>
+            <input type="email" id="email" ng-model="nuevaPeticion.email" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+        </div>
+        <div>
+            <label for="descripcion" class="block font-medium mb-1">Describa el problema:</label>
+            <textarea id="descripcion" ng-model="nuevaPeticion.descripcion" rows="4" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400"></textarea>
+        </div>
+        <div>
+            <label for="categoria" class="block font-medium mb-1">Categoría:</label>
+            <select id="categoria" ng-model="nuevaPeticion.categoria" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+                <option value="">Seleccione una categoría</option>
+                <option value="sistemas">Sistemas</option>
+                <option value="mantenimiento">Mantenimiento</option>
+            </select>
+        </div>
+        <div>
+            <label for="tipoLugar" class="block font-medium mb-1">Tipo de lugar:</label>
+            <select id="tipoLugar" ng-model="tipoLugar" ng-change="actualizarLugares()" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+                <option value="edificio">Edificio</option>
+                <option value="taller">Taller</option>
+            </select>
+        
+        </div>
+        <div>
+            <label for="lugar" class="block font-medium mb-1">{{ tipoLugar === 'taller' ? 'Taller:' : 'Edificio:' }}</label>
+            <select id="lugar" ng-model="nuevaPeticion.lugar" ng-change="resetUbicacion()" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+                <option value="">Seleccione un {{ tipoLugar === 'taller' ? 'taller' : 'edificio' }}</option>
+                <option ng-repeat="lugar in lugares" value="{{lugar}}">{{lugar}}</option>
+            </select>
+        </div>
+        <div ng-if="nuevaPeticion.lugar">
+            <label class="block font-medium mb-1">Planta:</label>
+            <select ng-model="nuevaPeticion.planta" ng-change="resetZona()" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+                <option value="">Seleccione una planta</option>
+                <option value="baja">Planta baja</option>
+                <option value="alta">Planta alta</option>
+            </select>
+        </div>
+        <div ng-if="nuevaPeticion.planta">
+            <label class="block font-medium mb-1">Zona:</label>
+            <select ng-model="nuevaPeticion.zona" ng-change="resetSalon()" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+                <option value="">Seleccione una zona</option>
+                <option value="pasillo">Pasillo</option>
+                <option value="oficina">Oficina</option>
+                <option value="salon">Salones/Laboratorios</option>
+            </select>
+        </div>
+        <div ng-if="nuevaPeticion.zona === 'salon'">
+            <label class="block font-medium mb-1">Seleccione salón o laboratorio:</label>
+            <select ng-model="nuevaPeticion.salon" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+                <option value="">Seleccione una opción</option>
+                <option ng-repeat="opcion in getSalones(nuevaPeticion.planta)" value="{{opcion}}">{{opcion}}</option>
+            </select>
+        </div>
+        <div>
+            <button type="submit" ng-disabled="peticionForm.$invalid" class="w-full bg-blue-900 hover:bg-blue-700 text-white font-semibold py-2 rounded-md transition-colors">Enviar problema</button>
+        </div>
+    </form>
+    <!-- Modal de éxito -->
+    <div class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50" ng-show="modalExito">
+        <div class="bg-white rounded-lg p-8 shadow-xl text-center min-w-[260px] transition-all duration-300" ng-class="{'translate-y-10 opacity-0': modalCerrando, 'translate-y-0 opacity-100': !modalCerrando}">
+            <p class="text-lg font-medium mb-4">¡Su problema ha sido enviado y está en espera de revisión!</p>
+            <button ng-click="cerrarModal()" class="mt-2 bg-blue-900 hover:bg-blue-700 text-white px-5 py-2 rounded-md">Cerrar</button>
+        </div>
+    </div>
+</main>
+<script>
+angular.module('peticionesApp', [])
+.controller('FormCtrl', ['$scope', '$timeout', function($scope, $timeout) {
+    $scope.nuevaPeticion = {};
+    $scope.modalExito = false;
+    $scope.modalCerrando = false;
+    $scope.tipoLugar = 'edificio';
+    $scope.lugaresEdificio = [
+        'Docencia 1',
+        'Docencia 2',
+        'Docencia 3'
+    ];
+    $scope.lugaresTaller = [
+        'Taller uno',
+        'Taller dos',
+        'Taller 3',
+        'taller de soldadura'
+    ];
+    $scope.lugares = angular.copy($scope.lugaresEdificio);
+    $scope.actualizarLugares = function() {
+        if ($scope.tipoLugar === 'taller') {
+            $scope.lugares = angular.copy($scope.lugaresTaller);
+        } else {
+            $scope.lugares = angular.copy($scope.lugaresEdificio);
+        }
+        $scope.nuevaPeticion.lugar = '';
+    };
+    $scope.enviarPeticion = function() {
+        if ($scope.peticionForm.$valid) {
+            $scope.nuevaPeticion = {};
+            $scope.peticionForm.$setPristine();
+            $scope.peticionForm.$setUntouched();
+            $scope.abrirModal();
+            $scope.tipoLugar = 'edificio';
+            $scope.actualizarLugares();
+        }
+    };
+    $scope.abrirModal = function() {
+        $scope.modalExito = true;
+        $scope.modalCerrando = false;
+    };
+    $scope.cerrarModal = function() {
+        $scope.modalCerrando = true;
+        $timeout(function() {
+            $scope.modalExito = false;
+        }, 300);
+    };
+    $scope.resetUbicacion = function() {
+        $scope.nuevaPeticion.planta = '';
+        $scope.nuevaPeticion.zona = '';
+        $scope.nuevaPeticion.salon = '';
+    };
+    $scope.resetZona = function() {
+        $scope.nuevaPeticion.zona = '';
+        $scope.nuevaPeticion.salon = '';
+    };
+    $scope.resetSalon = function() {
+        $scope.nuevaPeticion.salon = '';
+    };
+    $scope.getSalones = function(planta) {
+        if (planta === 'baja' || planta === 'alta') {
+            return [
+                'Salón A',
+                'Salón B',
+                'Salón C',
+                'Salón D',
+                'Salón E',
+                'Laboratorio de Lengua',
+                'Laboratorio'
+            ];
+        }
+        return [];
+    };
+}]);
+</script>
+</body>
+</html>

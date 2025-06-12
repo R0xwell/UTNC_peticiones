@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es" ng-app="peticionesApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UTNC PETICIONES DE MANTENIMIENTO</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body ng-controller="PeticionesCtrl" class="bg-gray-100 min-h-screen">
+<header class="bg-teal-600 text-white py-6 text-center">
+    <img src="UTNC.png" alt="Logo UTNC" class="h-20 mx-auto mb-2 bg-white rounded-full object-contain" />
+    <h1 class="text-2xl font-bold mb-1">UTNC PETICIONES DE MANTENIMIENTO</h1>
+    <a href="inde.html" class="underline text-white hover:text-teal-200">formulario</a>
+</header>
+<main class="max-w-2xl mx-auto mt-8 bg-white rounded-xl shadow-lg p-8">
+    <!-- Modal para motivo de rechazo -->
+    <div class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50" ng-show="modalRechazo.visible" ng-cloak>
+        <div class="bg-white rounded-lg p-8 shadow-xl text-center min-w-[260px] transition-all duration-300" ng-class="{'translate-y-10 opacity-0': modalRechazo.cerrando, 'translate-y-0 opacity-100': !modalRechazo.cerrando}">
+            <h3 class="text-lg font-semibold mb-4">Motivo del rechazo</h3>
+            <textarea class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400 mb-4" ng-model="modalRechazo.motivo" rows="3" placeholder="Escriba el motivo..." required></textarea>
+            <div class="flex justify-center gap-4">
+                <button ng-click="confirmarRechazo()" ng-disabled="!modalRechazo.motivo" class="bg-blue-900 hover:bg-blue-700 text-white px-5 py-2 rounded-md">Confirmar</button>
+                <button ng-click="cerrarModalRechazo()" class="bg-gray-400 hover:bg-gray-600 text-white px-5 py-2 rounded-md">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    <div class="mb-6 flex flex-wrap gap-2 justify-center">
+        <button ng-click="showCategory('todas')" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded">Todas</button>
+        <button ng-click="showCategory('sistemas')" class="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded">Sistemas</button>
+        <button ng-click="showCategory('mantenimiento')" class="bg-yellow-500 hover:bg-yellow-700 text-white px-4 py-2 rounded">Mantenimiento</button>
+        <button ng-click="showCategory('completadas')" class="bg-green-600 hover:bg-green-800 text-white px-4 py-2 rounded">Completadas</button>
+        <button ng-click="showCategory('rechazadas')" class="bg-red-600 hover:bg-red-800 text-white px-4 py-2 rounded">Peticiones Rechazadas</button>
+    </div>
+    <div class="mb-4" ng-show="categoriaActual === 'completadas'">
+        <label class="block font-medium mb-1">Filtrar por edificio:</label>
+        <select ng-model="filtroEdificio" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+            <option value="">Todos</option>
+            <option value="Docencia 1">Docencia 1</option>
+            <option value="Docencia 2">Docencia 2</option>
+            <option value="Docencia 3">Docencia 3</option>
+        </select>
+    </div>
+    <div id="peticiones-container">
+        <div id="todas" class="mb-8" ng-show="categoriaActual === 'todas'">
+            <h2 class="text-xl font-bold mb-4">Todas las Peticiones</h2>
+            <ul>
+                <li ng-repeat="peticion in peticiones | filter:{completada: false, rechazada: false}" class="bg-gray-50 mb-4 p-4 rounded shadow">
+                    <div class="mb-1"><strong>{{peticion.nombre}}</strong> <span class="text-gray-500">({{peticion.email}})</span></div>
+                    <div class="mb-1">{{peticion.descripcion}}</div>
+                    <div class="mb-1">
+                        <span class="inline-block bg-blue-500 text-white px-2 py-1 rounded text-xs mr-2" ng-if="peticion.categoria === 'sistemas'">Sistemas</span>
+                        <span class="inline-block bg-yellow-500 text-white px-2 py-1 rounded text-xs mr-2" ng-if="peticion.categoria === 'mantenimiento'">Mantenimiento</span>
+                        <span class="inline-block bg-orange-500 text-white px-2 py-1 rounded text-xs mr-2">{{peticion.edificio}}</span>
+                        <span class="inline-block bg-teal-600 text-white px-2 py-1 rounded text-xs mr-2" ng-if="peticion.planta">{{peticion.planta === 'alta' ? 'Planta Alta' : (peticion.planta === 'baja' ? 'Planta Baja' : '')}}</span>
+                        <span class="inline-block bg-gray-700 text-white px-2 py-1 rounded text-xs mr-2" ng-if="peticion.zona">{{peticion.zona | uppercase}}</span>
+                        <span class="inline-block bg-purple-600 text-white px-2 py-1 rounded text-xs" ng-if="peticion.salon">{{peticion.salon}}</span>
+                    </div>
+                    <div class="mt-2 flex gap-2">
+                        <button ng-click="marcarCumplida($index)" ng-disabled="peticion.completada" class="bg-green-600 hover:bg-green-800 text-white px-4 py-2 rounded">Cumplida</button>
+                        <button ng-click="abrirModalEnviar($index, categoria)" ng-disabled="peticion.completada || peticion.rechazada" class="bg-blue-900 hover:bg-blue-700 text-white px-4 py-2 rounded">Enviar</button>
+                        <button ng-click="editarPeticion($index, categoria)" class="bg-gray-400 hover:bg-gray-600 text-white px-4 py-2 rounded">Editar</button>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <div id="sistemas" class="mb-8" ng-show="categoriaActual === 'sistemas'">
+            <h2 class="text-xl font-bold mb-4">Peticiones de Sistemas</h2>
+            <ul>
+                <li ng-repeat="peticion in peticiones | filter:{categoria: 'sistemas', completada: false, rechazada: false}" class="bg-gray-50 mb-4 p-4 rounded shadow">
+                    <div class="mb-1"><strong>{{peticion.nombre}}</strong> <span class="text-gray-500">({{peticion.email}})</span></div>
+                    <div class="mb-1">{{peticion.descripcion}}</div>
+                    <div class="mb-1">
+                        <span class="inline-block bg-orange-500 text-white px-2 py-1 rounded text-xs mr-2">{{peticion.edificio}}</span>
+                        <span class="inline-block bg-teal-600 text-white px-2 py-1 rounded text-xs mr-2" ng-if="peticion.planta">{{peticion.planta === 'alta' ? 'Planta Alta' : (peticion.planta === 'baja' ? 'Planta Baja' : '')}}</span>
+                        <span class="inline-block bg-gray-700 text-white px-2 py-1 rounded text-xs mr-2" ng-if="peticion.zona">{{peticion.zona | uppercase}}</span>
+                        <span class="inline-block bg-purple-600 text-white px-2 py-1 rounded text-xs" ng-if="peticion.salon">{{peticion.salon}}</span>
+                    </div>
+                    <div class="mt-2 flex gap-2">
+                        <button ng-click="marcarCumplida($index, 'sistemas')" ng-disabled="peticion.completada" class="bg-green-600 hover:bg-green-800 text-white px-4 py-2 rounded">Cumplida</button>
+                        <button ng-click="abrirModalEnviar($index, 'sistemas')" ng-disabled="peticion.completada || peticion.rechazada" class="bg-blue-900 hover:bg-blue-700 text-white px-4 py-2 rounded">Enviar</button>
+                        <button ng-click="editarPeticion($index, 'sistemas')" class="bg-gray-400 hover:bg-gray-600 text-white px-4 py-2 rounded">Editar</button>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <div id="mantenimiento" class="mb-8" ng-show="categoriaActual === 'mantenimiento'">
+            <h2 class="text-xl font-bold mb-4">Peticiones de Mantenimiento</h2>
+            <ul>
+                <li ng-repeat="peticion in peticiones | filter:{categoria: 'mantenimiento', completada: false, rechazada: false}" class="bg-gray-50 mb-4 p-4 rounded shadow">
+                    <div class="mb-1"><strong>{{peticion.nombre}}</strong> <span class="text-gray-500">({{peticion.email}})</span></div>
+                    <div class="mb-1">{{peticion.descripcion}}</div>
+                    <div class="mb-1">
+                        <span class="inline-block bg-orange-500 text-white px-2 py-1 rounded text-xs mr-2">{{peticion.edificio}}</span>
+                        <span class="inline-block bg-teal-600 text-white px-2 py-1 rounded text-xs mr-2" ng-if="peticion.planta">{{peticion.planta === 'alta' ? 'Planta Alta' : (peticion.planta === 'baja' ? 'Planta Baja' : '')}}</span>
+                        <span class="inline-block bg-gray-700 text-white px-2 py-1 rounded text-xs mr-2" ng-if="peticion.zona">{{peticion.zona | uppercase}}</span>
+                        <span class="inline-block bg-purple-600 text-white px-2 py-1 rounded text-xs" ng-if="peticion.salon">{{peticion.salon}}</span>
+                    </div>
+                    <div class="mt-2 flex gap-2">
+                        <button ng-click="marcarCumplida($index, 'mantenimiento')" ng-disabled="peticion.completada" class="bg-green-600 hover:bg-green-800 text-white px-4 py-2 rounded">Cumplida</button>
+                        <button ng-click="abrirModalEnviar($index, 'mantenimiento')" ng-disabled="peticion.completada || peticion.rechazada" class="bg-blue-900 hover:bg-blue-700 text-white px-4 py-2 rounded">Enviar</button>
+                        <button ng-click="editarPeticion($index, 'mantenimiento')" class="bg-gray-400 hover:bg-gray-600 text-white px-4 py-2 rounded">Editar</button>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <div id="completadas" class="mb-8" ng-show="categoriaActual === 'completadas'">
+            <h2 class="text-xl font-bold mb-4">Tareas Completadas</h2>
+            <ul>
+                <li ng-repeat="peticion in completadas | filter:filtrarCompletadas" class="bg-green-50 mb-4 p-4 rounded shadow">
+                    <div class="mb-1"><strong>{{peticion.nombre}}</strong> <span class="text-gray-500">({{peticion.email}})</span></div>
+                    <div class="mb-1">{{peticion.descripcion}}</div>
+                    <div class="mb-1">
+                        <span class="inline-block bg-blue-500 text-white px-2 py-1 rounded text-xs mr-2" ng-if="peticion.categoria === 'sistemas'">Sistemas</span>
+                        <span class="inline-block bg-yellow-500 text-white px-2 py-1 rounded text-xs mr-2" ng-if="peticion.categoria === 'mantenimiento'">Mantenimiento</span>
+                        <span class="inline-block bg-orange-500 text-white px-2 py-1 rounded text-xs mr-2">{{peticion.edificio}}</span>
+                        <span class="inline-block bg-teal-600 text-white px-2 py-1 rounded text-xs mr-2" ng-if="peticion.planta">{{peticion.planta === 'alta' ? 'Planta Alta' : (peticion.planta === 'baja' ? 'Planta Baja' : '')}}</span>
+                        <span class="inline-block bg-gray-700 text-white px-2 py-1 rounded text-xs mr-2" ng-if="peticion.zona">{{peticion.zona | uppercase}}</span>
+                        <span class="inline-block bg-purple-600 text-white px-2 py-1 rounded text-xs" ng-if="peticion.salon">{{peticion.salon}}</span>
+                    </div>
+                    <div class="mt-2 flex gap-2">
+                        <button ng-click="editarPeticion($index, categoria)" class="bg-gray-400 hover:bg-gray-600 text-white px-4 py-2 rounded">Editar</button>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <div id="rechazadas" class="mb-8" ng-show="categoriaActual === 'rechazadas'">
+            <h2 class="text-xl font-bold mb-4">Peticiones Rechazadas</h2>
+            <ul>
+                <li ng-repeat="peticion in rechazadas" class="bg-red-50 mb-4 p-4 rounded shadow">
+                    <div class="mb-1"><strong>{{peticion.nombre}}</strong> <span class="text-gray-500">({{peticion.email}})</span></div>
+                    <div class="mb-1">{{peticion.descripcion}}</div>
+                    <div class="mb-1">
+                        <span class="inline-block bg-blue-500 text-white px-2 py-1 rounded text-xs mr-2" ng-if="peticion.categoria === 'sistemas'">Sistemas</span>
+                        <span class="inline-block bg-yellow-500 text-white px-2 py-1 rounded text-xs mr-2" ng-if="peticion.categoria === 'mantenimiento'">Mantenimiento</span>
+                        <span class="inline-block bg-orange-500 text-white px-2 py-1 rounded text-xs mr-2">{{peticion.edificio}}</span>
+                        <span class="inline-block bg-teal-600 text-white px-2 py-1 rounded text-xs mr-2" ng-if="peticion.planta">{{peticion.planta === 'alta' ? 'Planta Alta' : (peticion.planta === 'baja' ? 'Planta Baja' : '')}}</span>
+                        <span class="inline-block bg-gray-700 text-white px-2 py-1 rounded text-xs mr-2" ng-if="peticion.zona">{{peticion.zona | uppercase}}</span>
+                        <span class="inline-block bg-purple-600 text-white px-2 py-1 rounded text-xs" ng-if="peticion.salon">{{peticion.salon}}</span>
+                    </div>
+                    <div class="mt-2"><b>Motivo:</b> {{peticion.motivoRechazo}}</div>
+                    <div class="mt-2 flex gap-2">
+                        <button ng-click="editarPeticion($index, categoria)" class="bg-gray-400 hover:bg-gray-600 text-white px-4 py-2 rounded">Editar</button>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</main>
+<script>
+angular.module('peticionesApp', [])
+.controller('PeticionesCtrl', ['$scope', '$timeout', function($scope, $timeout) {
+    $scope.categoriaActual = 'todas';
+    $scope.filtroEdificio = '';
+    $scope.peticiones = [
+        {
+            nombre: "Juan Pérez",
+            email: "juan@example.com",
+            descripcion: "No funciona el sistema de correo.",
+            categoria: "sistemas",
+            edificio: "Docencia 1",
+            planta: "alta",
+            zona: "oficina",
+            salon: "",
+            completada: false,
+            rechazada: false
+        },
+        {
+            nombre: "Ana López",
+            email: "ana@example.com",
+            descripcion: "Fuga de agua en el baño.",
+            categoria: "mantenimiento",
+            edificio: "Docencia 2",
+            planta: "baja",
+            zona: "salon",
+            salon: "Salón B",
+            completada: false,
+            rechazada: false
+        },
+        {
+            nombre: "Carlos Ruiz",
+            email: "carlos@example.com",
+            descripcion: "Problemas para iniciar sesión.",
+            categoria: "sistemas",
+            edificio: "Docencia 3",
+            planta: "alta",
+            zona: "pasillo",
+            salon: "",
+            completada: false,
+            rechazada: false
+        },
+        {
+            nombre: "María Torres",
+            email: "maria@example.com",
+            descripcion: "El aire acondicionado no enciende.",
+            categoria: "mantenimiento",
+            edificio: "Docencia 1",
+            planta: "baja",
+            zona: "salon",
+            salon: "Laboratorio de Lengua",
+            completada: false,
+            rechazada: false
+        }
+    ];
+    $scope.completadas = [];
+
+    $scope.showCategory = function(cat) {
+        $scope.categoriaActual = cat;
+    };
+
+    $scope.marcarCumplida = function(index, categoria) {
+        let lista;
+        if (categoria === 'sistemas') {
+            lista = $scope.peticiones.filter(p => p.categoria === 'sistemas' && !p.completada && !p.rechazada);
+        } else if (categoria === 'mantenimiento') {
+            lista = $scope.peticiones.filter(p => p.categoria === 'mantenimiento' && !p.completada && !p.rechazada);
+        } else {
+            lista = $scope.peticiones.filter(p => !p.completada && !p.rechazada);
+        }
+        const peticion = lista[index];
+        if (peticion) {
+            peticion.completada = true;
+        }
+    };
+
+    // Modal de rechazo
+    $scope.modalRechazo = { visible: false, cerrando: false, motivo: '', index: null, categoria: null };
+    $scope.abrirModalRechazo = function(index, categoria) {
+        $scope.modalRechazo.visible = true;
+        $scope.modalRechazo.cerrando = false;
+        $scope.modalRechazo.motivo = '';
+        $scope.modalRechazo.index = index;
+        $scope.modalRechazo.categoria = categoria;
+    };
+    $scope.cerrarModalRechazo = function() {
+        $scope.modalRechazo.cerrando = true;
+        $timeout(function() {
+            $scope.modalRechazo.visible = false;
+        }, 300);
+    };
+    $scope.confirmarRechazo = function() {
+        let lista;
+        if ($scope.modalRechazo.categoria === 'sistemas') {
+            lista = $scope.peticiones.filter(p => p.categoria === 'sistemas' && !p.completada && !p.rechazada);
+        } else if ($scope.modalRechazo.categoria === 'mantenimiento') {
+            lista = $scope.peticiones.filter(p => p.categoria === 'mantenimiento' && !p.completada && !p.rechazada);
+        } else {
+            lista = $scope.peticiones.filter(p => !p.completada && !p.rechazada);
+        }
+        const peticion = lista[$scope.modalRechazo.index];
+        if (peticion) {
+            peticion.rechazada = true;
+            peticion.motivoRechazo = $scope.modalRechazo.motivo;
+        }
+        $scope.cerrarModalRechazo();
+    };
+
+    $scope.filtrarCompletadas = function(peticion) {
+        if (!$scope.filtroEdificio) return true;
+        return peticion.edificio === $scope.filtroEdificio;
+    };
+
+    // Modal para Enviar
+    $scope.modalEnviar = { visible: false, cerrando: false, index: null, categoria: null };
+    $scope.abrirModalEnviar = function(index, categoria) {
+        $scope.modalEnviar.visible = true;
+        $scope.modalEnviar.cerrando = false;
+        $scope.modalEnviar.index = index;
+        $scope.modalEnviar.categoria = categoria;
+    };
+    $scope.cerrarModalEnviar = function() {
+        $scope.modalEnviar.cerrando = true;
+        $timeout(function() {
+            $scope.modalEnviar.visible = false;
+        }, 300);
+    };
+    $scope.confirmarEnviar = function() {
+        // Aquí puedes poner la lógica de "enviar" (por ejemplo, marcar como enviada, mover a otra lista, etc.)
+        $scope.cerrarModalEnviar();
+    };
+    // Botón Editar
+    $scope.editarPeticion = function(index, categoria) {
+        // Redirige a editar.html con el índice o id de la petición
+        window.location.href = 'editar.html?index=' + index + '&categoria=' + (categoria || 'todas');
+    };
+}]);
+</script>
+</body>
+</html>
